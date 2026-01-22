@@ -1,299 +1,593 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Перевірка присутності</title>
-  <style>
-    :root {
-      --primary-color: #007bff;
-      --primary-hover: #0056b3;
-      --primary-active: #004095;
-      --font-size-base: 16px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>📱 Генератор Рапортички</title>
 
-    * {
-      box-sizing: border-box;
-    }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    body {
-      font-family: system-ui, sans-serif;
-      padding: 1rem;
-      font-size: var(--font-size-base);
-      line-height: 1.6;
-      background-color: #f4f4f4;
-      color: #333;
-    }
+<style>
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --bg: #f3f4f6;
+    --card-bg: #ffffff;
+    --text: #1f2937;
+    --border: #e5e7eb;
+    --success: #10b981;
+}
 
-    h1 {
-      text-align: center;
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
-    }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    .student-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 15px;
+    padding-bottom: 80px; /* Місце для кнопки знизу */
+}
 
-    .student label {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
+h1 {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--primary-dark);
+}
 
-    .student input[type="checkbox"] {
-      transform: scale(1.3);
-      margin-right: 0.75rem;
-    }
+h2 {
+    font-size: 1.1rem;
+    margin: 0 0 15px 0;
+    color: #4b5563;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+}
 
-    button {
-      width: 100%;
-      padding: 0.75rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 6px;
-      background-color: var(--primary-color);
-      color: white;
-      cursor: pointer;
-      margin-top: 0.5rem;
-      transition: all 0.2s ease-in-out;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transform: scale(1);
-    }
+/* --- КАРТКИ --- */
+.card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 
-    button:hover {
-      background-color: var(--primary-hover);
-      transform: scale(1.03);
-    }
+/* --- ВИБІР СТОРОНИ --- */
+.side-toggle {
+    display: flex;
+    background: #e0e7ff;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 15px;
+}
 
-    button:active {
-      background-color: var(--primary-active);
-      transform: scale(0.97);
-    }
+.side-toggle label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+    color: #4b5563;
+}
 
-    #okButton, #reasonButton, #reportButton {
-      display: none;
-    }
+.side-toggle input { display: none; }
 
-    #absentOutput {
-      white-space: pre-wrap;
-      margin-top: 1rem;
-      padding: 1rem;
-      background: #ffffff;
-      border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
+.side-toggle input:checked + label {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
 
-    #counter {
-      margin-top: 0.5rem;
-      font-weight: 600;
-      text-align: center;
-    }
+/* --- ВВОД ДАТИ --- */
+.date-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.full-width { grid-column: span 2; }
 
-    select {
-      margin-left: 0.5rem;
-      font-size: 1rem;
-      padding: 0.25rem;
-    }
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 16px; /* Щоб iOS не зумив при кліку */
+    background: #fff;
+    appearance: none;
+}
+input:focus, select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
 
-    #copyTextArea {
-      position: absolute;
-      left: -9999px;
-    }
+/* --- РОЗКЛАД --- */
+.pair-card {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.pair-header {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--primary);
+    margin-bottom: 5px;
+    display: block;
+}
+.pair-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
-    @media (min-width: 600px) {
-      .student-list {
-        max-width: 600px;
-        margin: 0 auto 1rem;
-      }
+/* --- СТУДЕНТИ --- */
+.student-row {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+}
+.student-row:last-child { border-bottom: none; }
 
-      button {
-        max-width: 400px;
-        margin: 0.5rem auto;
-        display: block;
-      }
+.student-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+}
 
-      #absentOutput {
-        max-width: 600px;
-        margin: 1rem auto;
-      }
-    }
-  </style>
+.student-name {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Гарний перемикач (Toggle) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--primary); }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* Деталі студента */
+.student-details {
+    display: none;
+    margin-top: 10px;
+    background: #f0f9ff;
+    padding: 15px;
+    border-radius: 10px;
+    animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Кнопки для пар (0 1 2 3 4) */
+.pair-bubbles {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+.pair-check-label {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #6b7280;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.pair-check-input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+.pair-check-input:checked + .pair-check-label {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* --- ГОЛОВНА КНОПКА --- */
+.fab-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 100;
+}
+.btn-generate {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-generate:active {
+    transform: scale(0.98);
+    background: var(--primary-dark);
+}
+
+/* Input file styling */
+.file-upload {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+.file-upload input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+.file-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    border: 2px dashed var(--primary);
+    color: var(--primary);
+    text-align: center;
+    border-radius: 8px;
+    font-weight: 600;
+}
+</style>
 </head>
+
 <body>
-  <h1>Перевірка присутності</h1>
-  <div class="student-list" id="studentList"></div>
-  <button id="okButton" onclick="handleFirstOK()">OK</button>
-  <div id="counter"></div>
-  <div id="absentOutput"></div>
-  <textarea id="copyTextArea" readonly></textarea>
-  <button id="reasonButton" onclick="generateFinalList()">OK (з причинами)</button>
-  <button id="reportButton" onclick="goToReport()">Перейти до звіту</button>
 
-  <script>
-    const students = [
-      "Білей М.Д.",
-      "Бондарець М.Р.",
-      "Гаркуша Р.С.",
-      "Демченко В.А.",
-      "Євстратенко І.В.",
-      "Зайченко Я.П.",
-      "Кирпа Г.С.",
-      "Клименко С.О.",
-      "Колесов М.В.",
-      "Колісніченко І.Б.",
-      "Кривенко М.О.",
-      "Ледньов Є.О.",
-      "Масалова В.М.",
-      "Мурзін Т.Б.",
-      "Нетудихата Б.С.",
-      "Письменний Т.Р.",
-      "Піньковський А.Р.",
-      "Самарець І.Д.",
-      "Сидоренко О.С.",
-      "Скляренко Р.І.",
-      "Ткаченко В.М.",
-      "Третяк Г.П.",
-      "Шеремет Д.С.",
-      "Шкуренко П.К.",
-      "Шульга О.Г."
-    ];
+<h1>📄 Рапортичка</h1>
 
-    const reasons = [
-      "сім. обст.",
-      "захворів",
-      "без пов.прич.",
-      "хворіє",
-      "у лікаря",
-      "на конкурсі",
-      "технічні проблеми",
-      "пог. самопоч.",
-      "немає інтернету",
-      "відсторонений",
-      "інд.",
-      "запізн."
-    ];
+<div class="card" style="padding: 10px;">
+    <div class="side-toggle">
+        <input type="radio" name="side" id="sideLeft" value="left" checked onchange="updateSideVal()">
+        <label for="sideLeft">⬅️ Ліва</label>
+        
+        <input type="radio" name="side" id="sideRight" value="right" onchange="updateSideVal()">
+        <label for="sideRight">Права ➡️</label>
+    </div>
+    <input type="hidden" id="sideSelect" value="left">
+</div>
 
-    // Новий список студентів, для яких причина "за кордоном" ставиться автоматично
-    const abroadStudents = new Set([
-      "Євстратенко І.В.",
-      "Колісніченко І.Б.",
-      "Піньковський А.Р.",
-      "Шульга О.Г."
-    ]);
+<div class="card">
+    <h2>1. Шаблон (.xlsx)</h2>
+    <div class="file-upload">
+        <div class="file-btn" id="fileNameDisplay">Натисніть, щоб обрати файл</div>
+        <input type="file" id="uploadTemplate" accept=".xlsx" onchange="document.getElementById('fileNameDisplay').innerText = this.files[0].name">
+    </div>
+</div>
 
-    const listContainer = document.getElementById('studentList');
-    const okButton = document.getElementById('okButton');
-    const reasonButton = document.getElementById('reasonButton');
-    const reportButton = document.getElementById('reportButton');
-    const counter = document.getElementById('counter');
-    const textArea = document.getElementById('copyTextArea');
+<div class="card">
+    <h2>2. Дата та Група</h2>
+    <div class="date-grid">
+        <div>
+            <label style="font-size:0.8rem; color:#666">День</label>
+            <input type="number" id="dayInput">
+        </div>
+        <div>
+             <label style="font-size:0.8rem; color:#666">Рік</label>
+            <input type="number" id="yearInput">
+        </div>
+        <div class="full-width">
+             <label style="font-size:0.8rem; color:#666">Місяць</label>
+            <select id="monthInput">
+                <option value="0">Січня</option>
+                <option value="1">Лютого</option>
+                <option value="2">Березня</option>
+                <option value="3">Квітня</option>
+                <option value="4">Травня</option>
+                <option value="5">Червня</option>
+                <option value="6">Липня</option>
+                <option value="7">Серпня</option>
+                <option value="8">Вересня</option>
+                <option value="9">Жовтня</option>
+                <option value="10">Листопада</option>
+                <option value="11">Грудня</option>
+            </select>
+        </div>
+        <div class="full-width">
+             <label style="font-size:0.8rem; color:#666">Група</label>
+            <input type="text" id="groupInput" value="85">
+        </div>
+    </div>
+</div>
 
-    students.forEach((name, index) => {
-      const div = document.createElement('div');
-      div.classList.add('student');
-      div.innerHTML = `<label><input type="checkbox" id="student${index}" onchange="toggleOKButton()"> ${name}</label>`;
-      listContainer.appendChild(div);
+<div class="card">
+    <h2>3. Розклад</h2>
+    <div id="schedule"></div>
+</div>
+
+<div class="card">
+    <h2>4. Відсутні</h2>
+    <div id="students"></div>
+</div>
+
+<div class="fab-container">
+    <button class="btn-generate" onclick="generateExcel()">Завантажити Excel</button>
+</div>
+
+<script>
+// Синхронізація гарного перемикача з логікою
+function updateSideVal() {
+    const isLeft = document.getElementById('sideLeft').checked;
+    document.getElementById('sideSelect').value = isLeft ? 'left' : 'right';
+}
+
+// ===== АВТОМАТИЧНА ДАТА =====
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    document.getElementById('dayInput').value = today.getDate();
+    document.getElementById('monthInput').value = today.getMonth(); 
+    document.getElementById('yearInput').value = today.getFullYear();
+});
+
+// ===== ДАНІ =====
+const students = [
+  "Білей М.Д.","Бондарець М.Р.","Гаркуша Р.С.","Демченко В.А.","Євстратенко І.В.",
+  "Зайченко Я.П.","Кирпа Г.С.","Клименко С.О.","Колесов М.В.","Колісніченко І.Б.",
+  "Кривенко М.О.","Ледньов Є.О.","Масалова В.М.","Мурзін Т.Б.","Нетудихата Б.С.",
+  "Письменний Т.Р.","Піньковський А.Р.","Самарець І.Д.","Сидоренко О.С.","Скляренко Р.І.",
+  "Ткаченко В.М.","Третяк Г.П.","Шеремет Д.С.","Шкуренко П.К.","Шульга О.Г."
+];
+
+const reasons = [
+  "нем.інт.","інд.","сім. обст.","захворів","без пов.прич.",
+  "хворіє","у лікаря","на конкурсі","техн. пробл.",
+  "пог. самопоч.","відсторонений","запізн."
+];
+
+const teachersDB = {
+  "Комп'ютерні технології": "Гончаров О.М.",
+  "Іноземна мова": "Токарєва О.В.",
+  "Фізика і астрономія": "Карпова Л.М.",
+  "Технології (М2 'Креслення')": "Васильченко І.І.",
+  "Основи теорії кіл": "Чорний О.А.",
+  "Фізична культура": "Філіппов Д.В.",
+  "Інформатика": "Житченко І.М.",
+  "Технології (М1 'Основи')": "Андрєєв В.О.",
+  "Українська література": "Прощенко І.М.",
+  "Біологія і екологія": "Шайтанова О.М.",
+  "Математика Алгебра": "Коваль І.А.",
+  "Історія України": "Домніна Г.С.",
+  "Українська мова": "Прощенко І.М."
+};
+
+const monthNames = [
+    "Січня", "Лютого", "Березня", "Квітня", "Травня", "Червня", 
+    "Липня", "Серпня", "Вересня", "Жовтня", "Листопада", "Грудня"
+];
+
+// ===== ГЕНЕРАЦІЯ РОЗКЛАДУ (Mobile Layout) =====
+const schedule = document.getElementById("schedule");
+
+for (let i = 0; i <= 4; i++) {
+  schedule.innerHTML += `
+    <div class="pair-card">
+      <span class="pair-header">${i} пара</span>
+      <div class="pair-inputs">
+        <select id="subj_${i}" onchange="autoTeacher(${i})">
+            <option value="">— Оберіть предмет —</option>
+            ${Object.keys(teachersDB).map(s => `<option value="${s}">${s}</option>`).join("")}
+            <option value="custom">Вписати вручну...</option>
+        </select>
+        <input id="teach_${i}" placeholder="Прізвище викладача">
+      </div>
+    </div>`;
+}
+
+function autoTeacher(i) {
+  const subjEl = document.getElementById(`subj_${i}`);
+  const teacherEl = document.getElementById(`teach_${i}`);
+  const subjValue = subjEl.value;
+
+  if (teachersDB[subjValue]) {
+    teacherEl.value = teachersDB[subjValue];
+  } else if (subjValue !== "custom") {
+    teacherEl.value = "";
+  }
+
+  const isSelected = (subjValue !== "");
+
+  students.forEach((_, studentIndex) => {
+    // Шукаємо наші нові "пузирчасті" чекбокси
+    const checkboxes = document.querySelectorAll(`.p${studentIndex}`);
+    checkboxes.forEach(cb => {
+        if (cb.value == i) {
+            cb.checked = isSelected;
+        }
     });
+  });
+}
 
-    function toggleOKButton() {
-      const absentCount = students.filter((_, index) => !document.getElementById(`student${index}`).checked).length;
-      okButton.style.display = absentCount > 0 ? 'block' : 'none';
+// ===== ГЕНЕРАЦІЯ СТУДЕНТІВ (Mobile Toggle) =====
+const studentsDiv = document.getElementById("students");
+
+students.forEach((s, i) => {
+  studentsDiv.innerHTML += `
+    <div class="student-row">
+      <div class="student-header">
+        <span class="student-name">${s}</span>
+        <label class="switch">
+            <input type="checkbox" id="chk_${i}" onchange="toggle(${i})">
+            <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="student-details" id="det_${i}">
+        <label style="font-size:0.8rem; color:#666">Причина:</label>
+        <select id="reason_${i}" style="margin-top:5px; margin-bottom:15px;">
+          ${reasons.map(r => `<option>${r}</option>`).join("")}
+        </select>
+
+        <label style="font-size:0.8rem; color:#666">Пропущені пари:</label>
+        <div class="pair-bubbles">
+          ${[0,1,2,3,4].map(pairNum => `
+            <div>
+              <input type="checkbox" class="pair-check-input p${i}" id="p_${i}_${pairNum}" value="${pairNum}">
+              <label for="p_${i}_${pairNum}" class="pair-check-label">${pairNum}</label>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+});
+
+function toggle(i) {
+  const details = document.getElementById(`det_${i}`);
+  const isChecked = document.getElementById(`chk_${i}`).checked;
+  
+  if (isChecked) {
+      details.style.display = "block";
+  } else {
+      details.style.display = "none";
+  }
+}
+
+// ===== EXCEL ЛОГІКА (БЕЗ ЗМІН) =====
+
+function styleCell(cell, bold, size=11, italic=false) {
+  cell.font = { name: "Times New Roman", size: size, bold: bold, italic: italic };
+  cell.alignment = { horizontal: "center", vertical: "middle" };
+}
+
+async function generateExcel() {
+  const file = document.getElementById("uploadTemplate").files[0];
+  if (!file) { alert("⚠️ Будь ласка, оберіть файл шаблону!"); return; }
+
+  const side = document.getElementById("sideSelect").value;
+  
+  // Колонки (зі зміщенням на 1 клітинку вперед для правої частини)
+  const cols = {
+      header:   side === 'left' ? "A2" : "K2",
+      subject:  side === 'left' ? "B"  : "L",
+      teacher:  side === 'left' ? "C"  : "M",
+      grades:   side === 'left' ? ["C","D","E","F","G"] : ["M","N","O","P","Q"], 
+      total:    side === 'left' ? "H"  : "R"
+  };
+
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const ws = wb.getWorksheet(1);
+
+  const day = document.getElementById('dayInput').value;
+  const monthIdx = document.getElementById('monthInput').value;
+  const yearFull = document.getElementById('yearInput').value.toString();
+  const groupNum = document.getElementById('groupInput').value;
+  const monthStr = monthNames[monthIdx];
+  const yearPrefix = yearFull.substring(0, 2); 
+  const yearSuffix = yearFull.substring(2, 4);
+
+  const fontBase = { name: 'Times New Roman', size: 10 };
+  const fontUnder = { name: 'Times New Roman', size: 10, underline: true };
+  const fontYearPrefix = { name: 'Times New Roman', size: 10, bold: true, italic: true }; 
+  const fontYearSuffix = { name: 'Times New Roman', size: 10, bold: true, italic: true, underline: true };
+
+  const headerCell = ws.getCell(cols.header);
+  headerCell.value = {
+    richText: [
+      { text: '"', font: fontBase },
+      { text: '  ' + day + '  ', font: fontUnder }, 
+      { text: '"   ', font: fontBase },
+      { text: '   ' + monthStr, font: fontUnder }, 
+      { text: ' ', font: fontBase },
+      { text: yearPrefix, font: fontYearPrefix },
+      { text: yearSuffix, font: fontYearSuffix },
+      { text: ' р.  Гр. №', font: fontBase }, 
+      { text: '  ' + groupNum + '  ', font: fontUnder },
+      { text: '.', font: fontBase }
+    ]
+  };
+  headerCell.alignment = { horizontal: "center", vertical: "middle" };
+
+  const rowMap = {0:4, 1:5, 2:6, 3:7, 4:8}; 
+  
+  for (let i = 0; i <= 4; i++) {
+    const subjVal = document.getElementById(`subj_${i}`).value;
+    const teachVal = document.getElementById(`teach_${i}`).value;
+    
+    if (subjVal || teachVal) {
+        ws.getCell(`${cols.subject}${rowMap[i]}`).value = subjVal;
+        ws.getCell(`${cols.teacher}${rowMap[i]}`).value = teachVal;
+        styleCell(ws.getCell(`${cols.subject}${rowMap[i]}`), false);
+        styleCell(ws.getCell(`${cols.teacher}${rowMap[i]}`), false);
     }
+  }
 
-    function handleFirstOK() {
-      const absentOutput = document.getElementById('absentOutput');
-      absentOutput.innerHTML = '';
+  let row = 11; 
+  students.forEach((s, i) => {
+    if(document.getElementById(`chk_${i}`).checked){
+      const reason = document.getElementById(`reason_${i}`).value;
+      
+      const nameCell = ws.getCell(`${cols.subject}${row}`);
+      nameCell.value = `${s} (${reason})`;
+      nameCell.font = { name: "Times New Roman", size: 11, italic: false };
+      nameCell.alignment = { horizontal: "center", vertical: "middle" };
 
-      let absentCount = 0;
-      students.forEach((name, index) => {
-        if (!document.getElementById(`student${index}`).checked) {
-          absentCount++;
-          const select = document.createElement('select');
-          select.id = `reason${index}`;
-
-          // Перевіряємо, чи є студент у списку "за кордоном"
-          const isAbroad = abroadStudents.has(name);
-
-          const defaultOption = document.createElement('option');
-          defaultOption.textContent = '...';
-          defaultOption.disabled = false;
-          defaultOption.value = "";
-          // Обираємо '...' за замовчуванням, ТІЛЬКИ ЯКЩО студент НЕ у списку
-          defaultOption.selected = !isAbroad;
-          select.appendChild(defaultOption);
-
-          reasons.forEach(reason => {
-            const option = document.createElement('option');
-            option.value = reason;
-            option.textContent = reason;
-            // Якщо студент у списку і причина "інд.", обираємо її
-            if (isAbroad && reason === "інд.") {
-              option.selected = true;
-            }
-            select.appendChild(option);
-          });
-
-          const line = document.createElement('div');
-          line.textContent = name;
-          line.appendChild(select);
-          absentOutput.appendChild(line);
+      let hours = 0;
+      document.querySelectorAll(`.p${i}:checked`).forEach(p => {
+        const pairIndex = p.value;
+        const colLetter = cols.grades[pairIndex];
+        if (colLetter) {
+            ws.getCell(`${colLetter}${row}`).value = "2";
+            styleCell(ws.getCell(`${colLetter}${row}`), true, 11, false);
+            hours += 2;
         }
       });
 
-      counter.textContent = `Відсутні: ${absentCount} з ${students.length}`;
-      reasonButton.style.display = 'block';
-      absentOutput.scrollIntoView({ behavior: "smooth" });
+      ws.getCell(`${cols.total}${row}`).value = hours;
+      styleCell(ws.getCell(`${cols.total}${row}`), true, 11, false);
+      row++;
     }
+  });
 
-    function generateFinalList() {
-      const lines = [];
-      students.forEach((name, index) => {
-        if (!document.getElementById(`student${index}`).checked) {
-          const reasonSelect = document.getElementById(`reason${index}`);
-          let reasonValue = reasonSelect && reasonSelect.value ? reasonSelect.value : "";
-          
-          let reason;
-          if (reasonValue) {
-            // Якщо причина обрана (не '...'), беремо її
-            reason = reasonValue;
-          } else {
-            // Якщо причина не обрана ('...'), перевіряємо список
-            if (abroadStudents.has(name)) {
-              reason = "інд."; // Автоматична причина для цієї групи
-            } else {
-              reason = "немає інтернету"; // Стандартна причина для інших
-            }
-          }
-          
-          lines.push(`${name} (${reason})`);
-        }
-      });
-      let listBody = lines.map((line, idx) => idx === lines.length - 1 ? line + '.' : line + ';').join("\n");
-      const resultText = lines.length > 0 ? `Відсутні:\n${listBody}` : "Всі присутні.";
-      document.getElementById('absentOutput').textContent = resultText;
+  const buf = await wb.xlsx.writeBuffer();
+  const sideSuffix = side === 'left' ? '_Left' : '_Right';
+  saveAs(new Blob([buf]), `raport_${day}_${monthStr}${sideSuffix}.xlsx`);
+}
+</script>
 
-      textArea.value = listBody;
-      textArea.select();
-      try {
-        const successful = document.execCommand('copy');
-        alert(successful ? "Список скопійовано до буфера обміну!" : "Не вдалося скопіювати.");
-        reasonButton.style.display = 'none';
-        reportButton.style.display = 'block';
-      } catch (err) {
-        alert("Помилка при копіюванні");
-      }
-    }
-
-    function goToReport() {
-      window.open("https://docs.google.com/forms/d/e/1FAIpQLSewGvRM4qcyDnPhsysO8Upa5nujHcizWCRCpifB9XAmf3LWrQ/viewform", "_blank");
-    }
-  </script>
 </body>
 </html>
